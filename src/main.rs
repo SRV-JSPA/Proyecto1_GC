@@ -72,19 +72,21 @@ fn draw_cell(framebuffer: &mut Framebuffer, xo: usize, yo: usize, block_size: us
     }
 }
 
-fn render(framebuffer: &mut Framebuffer, player: &Player) {
+fn render(framebuffer: &mut Framebuffer, player: &Player, x_offset: usize, y_offset: usize, scale: f32) {
     let maze = load_maze("./maze.txt");
-    let block_size = 100;
+    let block_size = (100.0 * scale) as usize;
 
     for row in 0..maze.len() {
         for col in 0..maze[row].len() {
-            draw_cell(framebuffer, col * block_size, row * block_size, block_size, maze[row][col])
+            draw_cell(framebuffer, x_offset + col * block_size, y_offset + row * block_size, block_size, maze[row][col])
         }
     }
 
     framebuffer.set_current_color(0xFFDDD);
-    if player.pos.x >= 0.0 && player.pos.x < framebuffer.width as f32 && player.pos.y >= 0.0 && player.pos.y < framebuffer.height as f32 {
-        framebuffer.point(player.pos.x as usize, player.pos.y as usize);
+    let player_x = x_offset + (player.pos.x * scale) as usize;
+    let player_y = y_offset + (player.pos.y * scale) as usize;
+    if player_x < framebuffer.width && player_y < framebuffer.height {
+        framebuffer.point(player_x, player_y);
     }
 
     let num_rays = 5;
@@ -173,7 +175,16 @@ fn main() {
 
         render3d(&mut framebuffer, &player);
 
-        
+        // Calculate minimap dimensions and position before mutable borrow
+        let minimap_scale = 0.1;  // 10% scale
+        let minimap_width = (framebuffer.width as f32 * minimap_scale) as usize;
+        let minimap_height = (framebuffer.height as f32 * minimap_scale) as usize;
+        let minimap_x_offset = framebuffer.width - minimap_width - 10;
+        let minimap_y_offset = 10;
+
+        // Render minimap
+        render(&mut framebuffer, &player, minimap_x_offset, minimap_y_offset, minimap_scale);
+
         let duration = start_time.elapsed();
         let frame_time = duration.as_secs_f32();
         fps = (1.0 / frame_time) as u32;
