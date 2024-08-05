@@ -6,13 +6,55 @@ mod caster;
 use minifb::{Window, WindowOptions, Key};
 use nalgebra_glm::Vec2;
 use std::f32::consts::PI;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 use crate::framebuffer::Framebuffer;
 use crate::maze::load_maze;
 use crate::player::{Player, process_events};
 use crate::caster::cast_ray;
 use std::io::BufReader;
-use rodio::OutputStream;
+
+const FUENTE: [[u8; 5]; 10] = [
+    [0b01110, 0b10001, 0b10001, 0b10001, 0b01110], 
+    [0b00100, 0b01100, 0b00100, 0b00100, 0b01110], 
+    [0b01110, 0b10001, 0b00110, 0b01000, 0b11111], 
+    [0b01110, 0b10001, 0b00110, 0b10001, 0b01110], 
+    [0b00100, 0b01100, 0b10100, 0b11111, 0b00100], 
+    [0b11111, 0b10000, 0b11110, 0b00001, 0b11110], 
+    [0b01110, 0b10000, 0b11110, 0b10001, 0b01110], 
+    [0b11111, 0b00010, 0b00100, 0b01000, 0b10000], 
+    [0b01110, 0b10001, 0b01110, 0b10001, 0b01110], 
+    [0b01110, 0b10001, 0b01111, 0b00001, 0b01110], 
+];
+
+fn draw_digit(framebuffer: &mut Framebuffer, x: usize, y: usize, digit: u8) {
+    if digit > 9 {
+        return;
+    }
+    for (row, bits) in FUENTE[digit as usize].iter().enumerate() {
+        for col in 0..5 {
+            if bits & (1 << (4 - col)) != 0 {
+                if x + col < framebuffer.width && y + row < framebuffer.height {
+                    framebuffer.point(x + col, y + row);
+                }
+            }
+        }
+    }
+}
+
+fn draw_fps(framebuffer: &mut Framebuffer, fps: u32) {
+    let mut fps_string = fps.to_string();
+    let x_offset = 10;
+    let y_offset = 10;
+    let digit_width = 6;
+
+    framebuffer.set_current_color(0xFFFFFF);
+
+    for (i, ch) in fps_string.chars().enumerate() {
+        if let Some(digit) = ch.to_digit(10) {
+            draw_digit(framebuffer, x_offset + i * digit_width, y_offset, digit as u8);
+        }
+    }
+}
 
 fn draw_cell(framebuffer: &mut Framebuffer, xo: usize, yo: usize, block_size: usize, cell: char) {
     if cell == ' ' {
@@ -118,20 +160,41 @@ fn main() {
 
     sink.play();
 
+    let mut last_time = Instant::now();
+    let mut frame_count = 0;
+    let mut fps = 0;
+
     while window.is_open() && !window.is_key_down(Key::Escape) {
+        let start_time = Instant::now();
+
         framebuffer.clear();
 
         process_events(&window, &mut player);
 
         render3d(&mut framebuffer, &player);
 
+        
+        let duration = start_time.elapsed();
+        let frame_time = duration.as_secs_f32();
+        fps = (1.0 / frame_time) as u32;
+        draw_fps(&mut framebuffer, fps);
+
         window
             .update_with_buffer(&framebuffer.buffer, framebuffer_width, framebuffer_height)
             .unwrap();
 
         std::thread::sleep(frame_delay);
+
+        frame_count += 1;
+        if frame_count % 60 == 0 {
+            println!("FPS: {:.2}", fps);
+        }
+
+        if last_time.elapsed() >= Duration::from_secs(1) {
+            last_time = Instant::now();
+            frame_count = 0;
+        }
     }
 
-    // Detener la música cuando se cierra la ventana
     sink.stop();
 }
