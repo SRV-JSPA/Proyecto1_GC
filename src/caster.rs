@@ -1,5 +1,6 @@
 use crate::framebuffer::Framebuffer;
 use crate::player::Player;
+use nalgebra_glm::Vec2; // Asegúrate de importar Vec2
 
 pub struct Intersect {
     pub distance: f32,
@@ -42,4 +43,18 @@ pub fn cast_ray(framebuffer: &mut Framebuffer, maze: &Vec<Vec<char>>, player: &P
 
         d += step_size;
     }
+}
+
+pub fn check_collision(maze: &Vec<Vec<char>>, player_pos: &Vec2, block_size: usize) -> bool {
+    let player_x = player_pos.x as usize;
+    let player_y = player_pos.y as usize;
+
+    let i = player_x / block_size;
+    let j = player_y / block_size;
+
+    if j >= maze.len() || i >= maze[j].len() {
+        return false;  // Fuera de límites
+    }
+
+    maze[j][i] != ' '
 }

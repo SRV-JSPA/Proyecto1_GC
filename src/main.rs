@@ -154,6 +154,9 @@ fn main() {
         fov: PI / 3.0
     };
 
+    let maze = load_maze("./maze.txt"); // Cargar el laberinto
+    let block_size = 100; // El tamaño del bloque, ajusta según tu configuración
+
     let (_stream, handle) = rodio::OutputStream::try_default().unwrap();
     let sink = rodio::Sink::try_new(&handle).unwrap();
 
@@ -171,18 +174,16 @@ fn main() {
 
         framebuffer.clear();
 
-        process_events(&window, &mut player);
+        process_events(&window, &mut player, &maze, block_size);
 
         render3d(&mut framebuffer, &player);
 
-        // Calculate minimap dimensions and position before mutable borrow
-        let minimap_scale = 0.1;  // 10% scale
+        let minimap_scale = 0.1;  
         let minimap_width = (framebuffer.width as f32 * minimap_scale) as usize;
         let minimap_height = (framebuffer.height as f32 * minimap_scale) as usize;
         let minimap_x_offset = framebuffer.width - minimap_width - 10;
         let minimap_y_offset = 10;
 
-        // Render minimap
         render(&mut framebuffer, &player, minimap_x_offset, minimap_y_offset, minimap_scale);
 
         let duration = start_time.elapsed();
