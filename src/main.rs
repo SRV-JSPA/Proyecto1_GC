@@ -11,6 +11,8 @@ use crate::framebuffer::Framebuffer;
 use crate::maze::load_maze;
 use crate::player::{Player, process_events};
 use crate::caster::cast_ray;
+use std::io::BufReader;
+use rodio::OutputStream;
 
 fn draw_cell(framebuffer: &mut Framebuffer, xo: usize, yo: usize, block_size: usize, cell: char) {
     if cell == ' ' {
@@ -21,7 +23,9 @@ fn draw_cell(framebuffer: &mut Framebuffer, xo: usize, yo: usize, block_size: us
 
     for x in xo..xo + block_size {
         for y in yo..yo + block_size {
-            framebuffer.point(x, y);
+            if x < framebuffer.width && y < framebuffer.height {
+                framebuffer.point(x, y);
+            }
         }
     }
 }
@@ -30,18 +34,17 @@ fn render(framebuffer: &mut Framebuffer, player: &Player) {
     let maze = load_maze("./maze.txt");
     let block_size = 100;
 
-    
     for row in 0..maze.len() {
         for col in 0..maze[row].len() {
             draw_cell(framebuffer, col * block_size, row * block_size, block_size, maze[row][col])
         }
     }
 
-    
     framebuffer.set_current_color(0xFFDDD);
-    framebuffer.point(player.pos.x as usize, player.pos.y as usize);
+    if player.pos.x >= 0.0 && player.pos.x < framebuffer.width as f32 && player.pos.y >= 0.0 && player.pos.y < framebuffer.height as f32 {
+        framebuffer.point(player.pos.x as usize, player.pos.y as usize);
+    }
 
-    
     let num_rays = 5;
     for i in 0..num_rays {
         let current_ray = i as f32 / num_rays as f32;
@@ -75,12 +78,13 @@ fn render3d(framebuffer: &mut Framebuffer, player: &Player) {
 
         framebuffer.set_current_color(0xFFFFFF);
 
-        for y in stake_top..stake_bottom {
-            framebuffer.point(i, y);
+        if stake_top < framebuffer.height && stake_bottom <= framebuffer.height {
+            for y in stake_top..stake_bottom {
+                framebuffer.point(i, y);
+            }
         }
     }
 }
-
 
 fn main() {
     let window_width = 1300;
@@ -106,10 +110,17 @@ fn main() {
         fov: PI / 3.0
     };
 
+    let (_stream, handle) = rodio::OutputStream::try_default().unwrap();
+    let sink = rodio::Sink::try_new(&handle).unwrap();
+
+    let file = std::fs::File::open("assets/musica.wav").unwrap();
+    sink.append(rodio::Decoder::new(BufReader::new(file)).unwrap());
+
+    sink.play();
+
     while window.is_open() && !window.is_key_down(Key::Escape) {
         framebuffer.clear();
 
-        
         process_events(&window, &mut player);
 
         render3d(&mut framebuffer, &player);
@@ -120,4 +131,7 @@ fn main() {
 
         std::thread::sleep(frame_delay);
     }
+
+    // Detener la música cuando se cierra la ventana
+    sink.stop();
 }

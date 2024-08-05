@@ -6,3 +6,5 @@ edition = "2021"
 [dependencies]
 nalgebra-glm = "0.18.0"
 minifb = "0.26.0"
+rodio = "0.14.0"
+minimp3 = "0.5.1"
