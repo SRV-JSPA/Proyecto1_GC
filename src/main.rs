@@ -14,6 +14,7 @@ use crate::caster::cast_ray;
 use rodio::{Sink, OutputStream};
 use std::fs::File;
 use std::io::BufReader;
+use gilrs::Gilrs;
 
 const FUENTE: [[u8; 5]; 10] = [
     [0b01110, 0b10001, 0b10001, 0b10001, 0b01110], 
@@ -172,6 +173,8 @@ fn main() {
 
     sink.play();
 
+    let mut gilrs = Gilrs::new().unwrap();
+
     let mut last_time = Instant::now();
     let mut frame_count = 0;
     let mut fps = 0;
@@ -181,7 +184,7 @@ fn main() {
 
         framebuffer.clear();
 
-        process_events(&window, &mut player, &maze, block_size);
+        process_events(&window, &mut player, &maze, block_size, &mut gilrs);
 
         render3d(&mut framebuffer, &player);
 
