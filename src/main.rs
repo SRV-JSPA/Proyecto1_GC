@@ -11,6 +11,8 @@ use crate::framebuffer::Framebuffer;
 use crate::maze::load_maze;
 use crate::player::{Player, process_events};
 use crate::caster::cast_ray;
+use rodio::{Sink, OutputStream};
+use std::fs::File;
 use std::io::BufReader;
 
 const FUENTE: [[u8; 5]; 10] = [
@@ -57,11 +59,12 @@ fn draw_fps(framebuffer: &mut Framebuffer, fps: u32) {
 }
 
 fn draw_cell(framebuffer: &mut Framebuffer, xo: usize, yo: usize, block_size: usize, cell: char) {
-    if cell == ' ' {
-        return;
+    match cell {
+        '+' => framebuffer.set_current_color(0xFF0000), // Rojo para '+'
+        '|' => framebuffer.set_current_color(0x00FF00), // Verde para '|'
+        '-' => framebuffer.set_current_color(0x0000FF), // Azul para '-'
+        _ => return,
     }
-
-    framebuffer.set_current_color(0xFFDDDD);
 
     for x in xo..xo + block_size {
         for y in yo..yo + block_size {
@@ -106,8 +109,6 @@ fn render3d(framebuffer: &mut Framebuffer, player: &Player) {
     let hw = framebuffer.width as f32 / 2.0;
     let hh = framebuffer.height as f32 / 2.0;
 
-    framebuffer.set_current_color(0xFFFFFF);
-
     for i in 0..num_rays {
         let current_ray = i as f32 / num_rays as f32;
         let a = player.a - (player.fov / 2.0) + (player.fov * current_ray);
@@ -120,7 +121,13 @@ fn render3d(framebuffer: &mut Framebuffer, player: &Player) {
         let stake_top = (hh - (stake_height / 2.0)) as usize;
         let stake_bottom = (hh + (stake_height / 2.0)) as usize;
 
-        framebuffer.set_current_color(0xFFFFFF);
+        // Establecer color según el impacto en la pared
+        match intersect.impact {
+            '+' => framebuffer.set_current_color(0xFF0000), // Rojo para '+'
+            '|' => framebuffer.set_current_color(0x00FF00), // Verde para '|'
+            '-' => framebuffer.set_current_color(0x0000FF), // Azul para '-'
+            _ => framebuffer.set_current_color(0xFFFFFF),  // Blanco por defecto
+        }
 
         if stake_top < framebuffer.height && stake_bottom <= framebuffer.height {
             for y in stake_top..stake_bottom {
