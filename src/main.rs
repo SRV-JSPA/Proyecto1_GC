@@ -169,7 +169,6 @@ fn main() {
     let frame_delay = Duration::from_millis(16);
     let textures = Textures::load();
 
-
     let mut framebuffer = Framebuffer::new(framebuffer_width, framebuffer_height);
 
     let mut window = Window::new(
@@ -203,23 +202,38 @@ fn main() {
     let mut last_time = Instant::now();
     let mut frame_count = 0;
     let mut fps = 0;
+    let mut tipo_render = true;
 
     while window.is_open() && !window.is_key_down(Key::Escape) {
+        if window.is_key_down(Key::C) {
+            tipo_render = !tipo_render;
+            std::thread::sleep(std::time::Duration::from_millis(200));
+        }
+
         let start_time = Instant::now();
 
         framebuffer.clear();
 
         process_events(&window, &mut player, &maze, block_size, &mut gilrs);
 
-        render3d(&mut framebuffer, &player, &textures);
+        if tipo_render {
+            // Renderizado 3D
+            render3d(&mut framebuffer, &player, &textures);
 
-        let minimap_scale = 0.1;  
-        let minimap_width = (framebuffer.width as f32 * minimap_scale) as usize;
-        let minimap_height = (framebuffer.height as f32 * minimap_scale) as usize;
-        let minimap_x_offset = framebuffer.width - minimap_width - 10;
-        let minimap_y_offset = 10;
+            // Renderizar minimapa
+            let minimap_scale = 0.1;  
+            let minimap_width = (framebuffer_width as f32 * minimap_scale) as usize;
+            let minimap_height = (framebuffer_height as f32 * minimap_scale) as usize;
+            let minimap_x_offset = framebuffer_width - minimap_width - 10;
+            let minimap_y_offset = 10;
 
-        render(&mut framebuffer, &player, minimap_x_offset, minimap_y_offset, minimap_scale);
+            render(&mut framebuffer, &player, minimap_x_offset, minimap_y_offset, minimap_scale);
+
+        } else {
+            // Renderizado normal, ocupando todo el espacio de la ventana
+            let full_scale = 1.0; // Utiliza la escala completa para llenar la ventana
+            render(&mut framebuffer, &player, 0, 0, full_scale);
+        }
 
         let duration = start_time.elapsed();
         let frame_time = duration.as_secs_f32();
@@ -245,3 +259,4 @@ fn main() {
 
     sink.stop();
 }
+
