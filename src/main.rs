@@ -160,7 +160,6 @@ fn render3d(framebuffer: &mut Framebuffer, player: &Player, textures: &Textures)
     }
 }
 
-
 fn main() {
     let window_width = 1300;
     let window_height = 900;
@@ -183,7 +182,8 @@ fn main() {
     let mut player = Player {
         pos: Vec2::new(150.0, 150.0),
         a: PI / 3.0,
-        fov: PI / 3.0
+        fov: PI / 3.0,
+        mouse_sensitivity: 0.005, // Añadido campo de sensibilidad del mouse
     };
 
     let maze = load_maze("./maze.txt"); // Cargar el laberinto
@@ -203,6 +203,7 @@ fn main() {
     let mut frame_count = 0;
     let mut fps = 0;
     let mut tipo_render = true;
+    let mut mouse_position = Vec2::new(0.0, 0.0);
 
     while window.is_open() && !window.is_key_down(Key::Escape) {
         if window.is_key_down(Key::C) {
@@ -213,8 +214,9 @@ fn main() {
         let start_time = Instant::now();
 
         framebuffer.clear();
+        
 
-        process_events(&window, &mut player, &maze, block_size, &mut gilrs);
+        process_events(&window, &mut player, &maze, block_size, &mut gilrs, &mut mouse_position);
 
         if tipo_render {
             // Renderizado 3D
@@ -259,4 +261,3 @@ fn main() {
 
     sink.stop();
 }
-

@@ -1,6 +1,6 @@
 use nalgebra_glm::Vec2;
 use std::f32::consts::PI;
-use minifb::{Window, Key};
+use minifb::{Window, Key, MouseButton};
 use gilrs::{Gilrs, Button, Event, EventType, Axis};
 use crate::caster::check_collision; // Asegúrate de importar check_collision
 use crate::framebuffer::Framebuffer;
@@ -9,12 +9,28 @@ pub struct Player {
     pub pos: Vec2,
     pub a: f32,
     pub fov: f32,
+    pub mouse_sensitivity: f32, // Añadido el campo de sensibilidad del ratón
 }
 
-pub fn process_events(window: &Window, player: &mut Player, maze: &Vec<Vec<char>>, block_size: usize, gilrs: &mut Gilrs) {
+pub fn process_events(
+    window: &Window,
+    player: &mut Player,
+    maze: &Vec<Vec<char>>,
+    block_size: usize,
+    gilrs: &mut Gilrs,
+    mouse_position: &mut Vec2, // Añadido para almacenar la posición del mouse
+) {
     const MOVE_SPEED: f32 = 5.0;
     const ROTATION_SPEED: f32 = PI / 35.0;
     const JOYSTICK_SENSITIVITY: f32 = 0.1;
+
+    // Obtener la posición actual del ratón
+    let current_mouse_position = window.get_mouse_pos(minifb::MouseMode::Pass).unwrap_or((0.0, 0.0));
+    let current_mouse_pos = Vec2::new(current_mouse_position.0 as f32, current_mouse_position.1 as f32);
+
+    // Calcular el delta del ratón
+    let mouse_delta = current_mouse_pos - *mouse_position;
+    *mouse_position = current_mouse_pos;
 
     // Manejar eventos de teclado
     if window.is_key_down(Key::Left) {
@@ -92,5 +108,10 @@ pub fn process_events(window: &Window, player: &mut Player, maze: &Vec<Vec<char>
         if !check_collision(maze, &new_pos, block_size) {
             player.pos = new_pos;
         }
+    }
+
+    // Aplicar el movimiento del ratón
+    if mouse_delta.x.abs() > 1.0 || mouse_delta.y.abs() > 1.0 {
+        player.a -= mouse_delta.x * player.mouse_sensitivity;
     }
 }
