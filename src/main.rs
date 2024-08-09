@@ -15,6 +15,7 @@ use rodio::{Sink, OutputStream};
 use std::fs::File;
 use std::io::BufReader;
 use gilrs::Gilrs;
+use image::{DynamicImage, GenericImageView, Pixel};
 
 const FUENTE: [[u8; 5]; 10] = [
     [0b01110, 0b10001, 0b10001, 0b10001, 0b01110], 
@@ -28,6 +29,22 @@ const FUENTE: [[u8; 5]; 10] = [
     [0b01110, 0b10001, 0b01110, 0b10001, 0b01110], 
     [0b01110, 0b10001, 0b01111, 0b00001, 0b01110], 
 ];
+
+struct Textures {
+    wall1: DynamicImage,
+    wall2: DynamicImage,
+    wall3: DynamicImage,
+}
+
+impl Textures {
+    fn load() -> Self {
+        Self {
+            wall1: image::open("images/cielo.jpg").unwrap(),
+            wall2: image::open("images/ladrillo.jpeg").unwrap(),
+            wall3: image::open("images/madera.jpg").unwrap(),
+        }
+    }
+}
 
 fn draw_digit(framebuffer: &mut Framebuffer, x: usize, y: usize, digit: u8) {
     if digit > 9 {
@@ -102,7 +119,7 @@ fn render(framebuffer: &mut Framebuffer, player: &Player, x_offset: usize, y_off
     }
 }
 
-fn render3d(framebuffer: &mut Framebuffer, player: &Player) {
+fn render3d(framebuffer: &mut Framebuffer, player: &Player, textures: &Textures) {
     let maze = load_maze("./maze.txt");
     let block_size = 100;
     let num_rays = framebuffer.width;
@@ -122,21 +139,27 @@ fn render3d(framebuffer: &mut Framebuffer, player: &Player) {
         let stake_top = (hh - (stake_height / 2.0)) as usize;
         let stake_bottom = (hh + (stake_height / 2.0)) as usize;
 
-        // Establecer color según el impacto en la pared
-        match intersect.impact {
-            '+' => framebuffer.set_current_color(0xFF0000), // Rojo para '+'
-            '|' => framebuffer.set_current_color(0x00FF00), // Verde para '|'
-            '-' => framebuffer.set_current_color(0x0000FF), // Azul para '-'
-            _ => framebuffer.set_current_color(0xFFFFFF),  // Blanco por defecto
-        }
+        let texture = match intersect.impact {
+            '+' => &textures.wall1,
+            '|' => &textures.wall2,
+            '-' => &textures.wall3,
+            _ => &textures.wall1,
+        };
 
         if stake_top < framebuffer.height && stake_bottom <= framebuffer.height {
+            let texture_height = texture.height();
             for y in stake_top..stake_bottom {
+                let texture_y = ((y - stake_top) as f32 / (stake_bottom - stake_top) as f32 * texture_height as f32) as u32;
+                let pixel = texture.get_pixel((i % texture.width() as usize) as u32, texture_y);
+                let rgba = pixel.to_rgba();
+                let color = ((rgba[0] as u32) << 16) | ((rgba[1] as u32) << 8) | (rgba[2] as u32);
+                framebuffer.set_current_color(color);
                 framebuffer.point(i, y);
             }
         }
     }
 }
+
 
 fn main() {
     let window_width = 1300;
@@ -144,6 +167,8 @@ fn main() {
     let framebuffer_width = 1300;
     let framebuffer_height = 900;
     let frame_delay = Duration::from_millis(16);
+    let textures = Textures::load();
+
 
     let mut framebuffer = Framebuffer::new(framebuffer_width, framebuffer_height);
 
@@ -186,7 +211,7 @@ fn main() {
 
         process_events(&window, &mut player, &maze, block_size, &mut gilrs);
 
-        render3d(&mut framebuffer, &player);
+        render3d(&mut framebuffer, &player, &textures);
 
         let minimap_scale = 0.1;  
         let minimap_width = (framebuffer.width as f32 * minimap_scale) as usize;
